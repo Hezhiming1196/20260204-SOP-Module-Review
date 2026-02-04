@@ -1,0 +1,79 @@
+我：看完聊天记录，继续执行查询任务，第二次查询结果已经上传
+claude:## 第一步：数据库审计 - 完整分析报告
+
+### 📊 查询结果分析
+
+**1. 两个"额外"表的用途已明确：**
+
+| 表名 | 用途 | 说明 |
+|------|------|------|
+| `sop_checklists` | 清单类SOP执行主表 | 关联 `order_id` 和 `template_id`，记录整体完成进度 |
+| `sop_checklist_items` | 清单具体检查项 | 关联 `checklist_id`，记录每个检查项的状态和结果 |
+
+这两个表是为**月嫂/育儿嫂/保姆**等清单类服务设计的，结构合理。
+
+---
+
+**2. 服务项目与SOP模板的关联方式已确认：**
+
+```
+sop_templates.service_category 字段值:
+├── point_comparison (标点对比) → 日常保洁、开荒保洁、家电清洗
+└── checklist (清单流程) → 月嫂服务、育儿嫂服务、保姆老人护理
+```
+
+**关联方式是通过「模板名称」与「服务名称」匹配**，而非数据库外键。这意味着关联逻辑写在**后端代码**中。
+
+---
+
+### ✅ 数据库审计结论
+
+| 检查项 | 状态 | 备注 |
+|--------|------|------|
+| SOP核心表创建 | ✅ 完成 | 7个表全部存在 |
+| 标点对比流程支持 | ✅ 完成 | `sop_point_photos` 表结构正确 |
+| 清单流程支持 | ✅ 完成 | `sop_checklists` + `sop_checklist_items` |
+| 敏感操作审计 | ✅ 完成 | `sop_sensitive_logs` 存在 |
+| 服务-模板关联 | ⚠️ 软关联 | 通过名称匹配，非外键 |
+
+---
+
+## 第二步：后端路由审计
+
+现在请在你的后端项目目录中执行以下操作：
+
+### 2.1 查找所有SOP相关的路由文件
+
+在 VS Code 终端或命令行中运行：
+
+```bash
+# Windows PowerShell
+Get-ChildItem -Recurse -Filter "*.js" | Select-String -Pattern "sop" -List | Select-Object Path
+
+# 或者在项目根目录用 grep (Git Bash / Linux / Mac)
+grep -rl "sop" --include="*.js" ./routes
+grep -rl "sop" --include="*.js" ./controllers
+```
+
+### 2.2 VS Code 快速搜索
+
+1. 按 `Ctrl + Shift + F` 打开全局搜索
+2. 搜索关键词：`router.*sop` 或 `'/sop`
+3. 记录找到的文件路径
+
+### 2.3 查找模板绑定逻辑
+
+在 VS Code 全局搜索中查找：
+- `template_id`
+- `getTemplateByService`
+- `matchTemplate`
+- `service_category`
+
+---
+
+**请执行以上操作，把找到的文件路径和关键代码片段截图或复制给我。**
+
+我需要确认：
+1. SOP 相关的 API 接口有哪些
+2. 服务项目与模板的匹配逻辑写在哪个函数中
+3. 订单创建时如何触发 SOP 流程
